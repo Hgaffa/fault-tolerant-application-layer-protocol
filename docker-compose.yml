@@ -1,0 +1,63 @@
+# run with: docker-compose up --build
+# For a server three, add "172.29.0.13" onto the end of the ./server.exe command
+version: "3"
+services:
+  server-1:
+    build: server/
+    command: > 
+      sh -c "cd /server &&
+             gcc -w -O2 ./*.c -pthread -o server.exe &&
+             ./server.exe 1000 1001 1002 172.29.0.12"
+    container_name: server-1
+    networks:
+      network:
+        ipv4_address: 172.29.0.11
+
+  server-2:
+    build: server/
+    command: > 
+      sh -c "cd /server &&
+             gcc -w -O2 ./*.c -pthread -o server.exe &&
+             ./server.exe 1000 1001 1002 172.29.0.11"
+    container_name: server-2
+    networks:
+      network:
+        ipv4_address: 172.29.0.12
+
+  # server-3:
+  #   build: server/
+  #   command: > 
+  #     sh -c "cd /server &&
+  #            gcc -w -O2 ./*.c -pthread -o server.exe &&
+  #            ./server.exe 1000 1001 1002 172.29.0.11 127.29.0.12"
+  #   container_name: server-3
+  #   networks:
+  #     network:
+  #       ipv4_address: 172.29.0.13
+
+  client:
+    image: gcc:latest
+    command: > 
+      sh -c "cd /client &&
+             rm -f *.txt *.jpeg *.jpg *.mov *.mp4 &&
+             gcc -w -O2 ./*.c -pthread -o client.exe &&
+             ./client.exe 172.29.0.11 1000 bigfile.jpeg"
+    depends_on:
+      - server-1
+      - server-2
+    container_name: client
+    networks:
+      network:
+        ipv4_address: 172.29.0.10
+    volumes:
+    - ./client:/client/
+
+networks:
+  network:
+    driver: bridge
+    enable_ipv6: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.29.0.0/16
+          gateway: 172.29.0.1
